@@ -49,7 +49,7 @@ web: ./showip-app
 
 ## 4. Buat file ZIP untuk deploy
 ```
-zip deploy.zip showip-app Procfile
+zip deploy.zip showip-app Procfile go.mod
 ```
 
 ## 5. Upload deploy.zip ke AWS Elastic Beanstalk
