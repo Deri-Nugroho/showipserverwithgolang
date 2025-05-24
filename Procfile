@@ -1,1 +1,1 @@
-web: ./showip-app
+web: go run main.go
