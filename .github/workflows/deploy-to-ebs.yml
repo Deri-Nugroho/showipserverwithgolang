@@ -1,28 +1,28 @@
-name: Deploy to Elastic Beanstalk (Go)
+name: Deploy Go App to EBS
 
 on:
   push:
     branches:
-      - main  # atau branch yang kamu pakai untuk deploy
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22' # versi Go kamu
+          go-version: '1.22'
 
       - name: Build Linux binary
         run: |
           GOOS=linux GOARCH=amd64 go build -o application main.go
 
-      - name: Create deployment package
+      - name: Package for deployment
         run: zip -r deployment.zip application Procfile
 
       - name: Configure AWS Credentials
@@ -33,15 +33,19 @@ jobs:
             aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
             aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Elastic Beanstalk
+      - name: Upload package to S3
+        run: |
+          aws s3 cp deployment.zip s3://${{ secrets.EBS_S3_BUCKET }}/deployment-${GITHUB_SHA}.zip
+
+      - name: Create new application version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.EBS_APP_NAME }}" \
             --version-label "build-${GITHUB_SHA}" \
-            --source-bundle S3Bucket="${{ secrets.EBS_APP_NAME }}",S3Key="deployments/deployment-${GITHUB_SHA}.zip"
+            --source-bundle S3Bucket="${{ secrets.EBS_S3_BUCKET }}",S3Key="deployment-${GITHUB_SHA}.zip"
 
-          aws s3 cp deployment.zip s3://${{ secrets.EBS_APP_NAME }}/deployments/deployment-${GITHUB_SHA}.zip
-
+      - name: Update environment
+        run: |
           aws elasticbeanstalk update-environment \
             --environment-name "${{ secrets.EBS_ENV_NAME }}" \
             --version-label "build-${GITHUB_SHA}"
